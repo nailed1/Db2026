@@ -1,88 +1,99 @@
-DROP TABLE IF EXISTS пачки CASCADE;
-DROP TABLE IF EXISTS параметры CASCADE;
-DROP TABLE IF EXISTS пользователи CASCADE;
-DROP TABLE IF EXISTS типы_оборудования CASCADE;
-DROP TABLE IF EXISTS должности CASCADE;
+-- Скрипт миграции №1
+-- Создание справочников и основных таблиц
 
-CREATE TABLE должности (
-	код_должности SERIAL PRIMARY KEY,
-	название_должности TEXT
+-- Удаление таблиц (для повторного запуска)
+DROP TABLE IF EXISTS batches CASCADE;
+DROP TABLE IF EXISTS parameters CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS equipment_types CASCADE;
+DROP TABLE IF EXISTS positions CASCADE;
+
+-- Справочник должностей
+CREATE TABLE positions (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
 );
 
-CREATE TABLE типы_оборудования (
-	код_оборудования SERIAL PRIMARY KEY,
-	название_оборудования TEXT
+-- Справочник типов оборудования (ДМК, ВР)
+CREATE TABLE equipment_types (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
 );
 
-CREATE TABLE пользователи (
-	код_пользователя SERIAL PRIMARY KEY,
-	имя_фамилия TEXT,
-	должность INTEGER,
-	FOREIGN KEY (должность) REFERENCES должности(код_должности)
+-- Пользователи системы
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    position_id INTEGER
 );
 
-CREATE TABLE параметры (
-	код_параметра SERIAL PRIMARY KEY,
-	название_параметра TEXT,
-	значение INTEGER
+-- Справочник параметров (высота, температура и т.д.)
+CREATE TABLE parameters (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER
 );
 
-CREATE TABLE пачки (
-	код_пачки SERIAL PRIMARY KEY,
-	номер_пачки TEXT,
-	оборудование INTEGER,
-	FOREIGN KEY (оборудование) REFERENCES типы_оборудования(код_оборудования),
-	пользователь INTEGER,
-	FOREIGN KEY (пользователь) REFERENCES пользователи(код_пользователя),
-	дата_создания DATE
+-- Пачки измерений
+CREATE TABLE batches (
+    id SERIAL PRIMARY KEY,
+    number TEXT NOT NULL,
+    equipment_id INTEGER,
+    user_id INTEGER,
+    created_at DATE
 );
 
-INSERT INTO должности (название_должности)
-VALUES
-    ('Инженер'),
-    ('Оператор'),
-    ('Технолог');
+-- Тестовые данные
 
-INSERT INTO типы_оборудования (название_оборудования)
+-- Должности
+INSERT INTO positions (name)
 VALUES
-    ('Станок ЧПУ'),
-    ('Пресс'),
-    ('Конвейер');
+    ('Engineer'),
+    ('Operator'),
+    ('Technologist');
 
-INSERT INTO пользователи (имя_фамилия, должность)
+-- Типы оборудования
+INSERT INTO equipment_types (name)
 VALUES
-    ('Иван Петров', 2),
-    ('Сергей Иванов', 1),
-    ('Александр Лужняков', 1),
-    ('Дмитрий Беринг', 3);
+    ('DMK'),
+    ('VR'),
+    ('CNC Machine');
 
-INSERT INTO параметры (название_параметра, значение)
+-- Пользователи
+INSERT INTO users (full_name, position_id)
 VALUES
-	('Высота метеопоста', 150),
-	('Температура', 15),
-	('Давление', 750),
-	('Направление ветра', 0),
-	('Скорость ветра', 0);
+    ('Ivan Petrov', 2),
+    ('Sergey Ivanov', 1),
+    ('Alexander Luzhnyakov', 1),
+    ('Dmitry Bering', 3);
 
-INSERT INTO пачки (номер_пачки, оборудование, пользователь, дата_создания)
+-- Параметры
+INSERT INTO parameters (name, value)
 VALUES
-    ('П-001', 1, 1, '2026-09-20'),
-    ('П-002', 2, 2, '2026-09-20'),
-    ('П-003', 3, 1, '2026-09-21'),
-    ('П-004', 1, 3, '2026-09-21'),
-    ('П-005', 2, 4, '2026-09-22');
+    ('Meteopost height', 150),
+    ('Temperature', 15),
+    ('Pressure', 750),
+    ('Wind direction', 0),
+    ('Wind speed', 0);
 
+-- Пачки
+INSERT INTO batches (number, equipment_id, user_id, created_at)
+VALUES
+    ('P-001', 1, 1, '2026-09-20'),
+    ('P-002', 2, 2, '2026-09-20'),
+    ('P-003', 3, 1, '2026-09-21'),
+    ('P-004', 1, 3, '2026-09-21'),
+    ('P-005', 2, 4, '2026-09-22');
+
+-- Выборка с объединением таблиц
 SELECT
-	пач.номер_пачки,
-	пач.дата_создания,
-	обор.название_оборудования,
-	пол.имя_фамилия,
-	дол.название_должности,
-	пар.название_параметра,
-	пар.значение
-FROM пачки AS пач
-JOIN типы_оборудования AS обор ON пач.оборудование = обор.код_оборудования
-JOIN пользователи AS пол ON пач.пользователь = пол.код_пользователя
-JOIN должности AS дол ON пол.должность = дол.код_должности
-CROSS JOIN параметры AS пар
-ORDER BY пач.номер_пачки, пар.название_параметра;
+    b.number AS batch_number,
+    b.created_at,
+    et.name AS equipment,
+    u.full_name,
+    p.name AS position
+FROM batches b
+JOIN equipment_types et ON b.equipment_id = et.id
+JOIN users u ON b.user_id = u.id
+JOIN positions p ON u.position_id = p.id
+ORDER BY b.number;
