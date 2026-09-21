@@ -55,9 +55,8 @@ VALUES
 -- Типы оборудования
 INSERT INTO equipment_types (name)
 VALUES
-    ('DMK'),
-    ('VR'),
-    ('CNC Machine');
+    ('DMC'),  -- десантный метеокомплект
+    ('VR');   -- ветровое ружьё
 
 -- Пользователи
 INSERT INTO users (full_name, position_id)
@@ -70,20 +69,21 @@ VALUES
 -- Параметры
 INSERT INTO parameters (name, value)
 VALUES
-    ('Meteopost height', 150),
+    ('Meteopost height', 100),
     ('Temperature', 15),
     ('Pressure', 750),
     ('Wind direction', 0),
-    ('Wind speed', 0);
+    ('Wind speed', 0),
+    ('Projectile drift range', 0);
 
 -- Пачки
 INSERT INTO batches (number, equipment_id, user_id, created_at)
 VALUES
-    ('P-001', 1, 1, '2026-09-20'),
-    ('P-002', 2, 2, '2026-09-20'),
-    ('P-003', 3, 1, '2026-09-21'),
-    ('P-004', 1, 3, '2026-09-21'),
-    ('P-005', 2, 4, '2026-09-22');
+    ('P-001', 1, 1, '2026-09-20'),  -- ДМК
+    ('P-002', 2, 2, '2026-09-20'),  -- ВР
+    ('P-003', 1, 1, '2026-09-21'),  -- ДМК
+    ('P-004', 2, 3, '2026-09-21'),  -- ВР
+    ('P-005', 1, 4, '2026-09-22');  -- ДМК
 
 -- Выборка с объединением таблиц
 SELECT
