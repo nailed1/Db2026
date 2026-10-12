@@ -1,8 +1,10 @@
--- PL/pgSQL скрипт: структура, данные, связи - в трёх отдельных транзакциях.
+-- 05_plpgsql.sql
+-- PL/pgSQL скрипт: структура, данные, связи — в одной общей транзакции
+-- с тремя вложенными блоками.
 
--- ТРАНЗАКЦИЯ 1: структура таблиц и счетчики
 BEGIN;
 
+-- Блок 1: структура таблиц и счетчики
 DO $$
 BEGIN
     DROP TABLE IF EXISTS temperature_calc CASCADE;
@@ -42,40 +44,65 @@ BEGIN
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_base_units'),
         name TEXT NOT NULL
     );
+    COMMENT ON TABLE base_units IS 'Справочник базовых единиц измерения';
+    COMMENT ON COLUMN base_units.id IS 'Уникальный код базовой величины';
+    COMMENT ON COLUMN base_units.name IS 'Название базовой величины';
 
     CREATE TABLE units (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_units'),
         base_unit_id INTEGER,
         name TEXT NOT NULL
     );
+    COMMENT ON TABLE units IS 'Справочник единиц измерения';
+    COMMENT ON COLUMN units.id IS 'Уникальный код единицы измерения';
+    COMMENT ON COLUMN units.base_unit_id IS 'Ссылка на базовую величину из base_units';
+    COMMENT ON COLUMN units.name IS 'Название единицы измерения';
 
     CREATE TABLE parameter_types (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_parameter_types'),
         unit_id INTEGER,
         name TEXT NOT NULL
     );
+    COMMENT ON TABLE parameter_types IS 'Справочник типов параметров измерения';
+    COMMENT ON COLUMN parameter_types.id IS 'Уникальный код типа параметра';
+    COMMENT ON COLUMN parameter_types.unit_id IS 'Ссылка на единицу измерения из units';
+    COMMENT ON COLUMN parameter_types.name IS 'Название типа параметра';
 
     CREATE TABLE devices (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_devices'),
         name TEXT NOT NULL
     );
+    COMMENT ON TABLE devices IS 'Справочник типов оборудования';
+    COMMENT ON COLUMN devices.id IS 'Уникальный код оборудования';
+    COMMENT ON COLUMN devices.name IS 'Название оборудования';
 
     CREATE TABLE device_parameter_types (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_device_parameter_types'),
         device_id INTEGER,
         parameter_type_id INTEGER
     );
+    COMMENT ON TABLE device_parameter_types IS 'Связка: доступные типы параметров для оборудования';
+    COMMENT ON COLUMN device_parameter_types.id IS 'Уникальный код записи';
+    COMMENT ON COLUMN device_parameter_types.device_id IS 'Ссылка на оборудование из devices';
+    COMMENT ON COLUMN device_parameter_types.parameter_type_id IS 'Ссылка на тип параметра из parameter_types';
 
     CREATE TABLE ranks (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_ranks'),
         rank TEXT NOT NULL
     );
+    COMMENT ON TABLE ranks IS 'Справочник военных званий';
+    COMMENT ON COLUMN ranks.id IS 'Уникальный код звания';
+    COMMENT ON COLUMN ranks.rank IS 'Название звания';
 
     CREATE TABLE soldiers (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_soldiers'),
         personal_id INTEGER,
         rank_id INTEGER
     );
+    COMMENT ON TABLE soldiers IS 'Справочник военнослужащих';
+    COMMENT ON COLUMN soldiers.id IS 'Уникальный код военнослужащего';
+    COMMENT ON COLUMN soldiers.personal_id IS 'Личный номер военнослужащего';
+    COMMENT ON COLUMN soldiers.rank_id IS 'Ссылка на звание из ranks';
 
     CREATE TABLE batch (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_batch'),
@@ -83,6 +110,11 @@ BEGIN
         device_id INTEGER,
         measured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    COMMENT ON TABLE batch IS 'История измерений (кто, оборудование, дата)';
+    COMMENT ON COLUMN batch.id IS 'Уникальный код партии';
+    COMMENT ON COLUMN batch.soldier_id IS 'Ссылка на военнослужащего из soldiers';
+    COMMENT ON COLUMN batch.device_id IS 'Ссылка на оборудование из devices';
+    COMMENT ON COLUMN batch.measured_at IS 'Дата и время измерения';
 
     CREATE TABLE parameters (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_parameters'),
@@ -90,6 +122,11 @@ BEGIN
         parameter_type_id INTEGER,
         value NUMERIC
     );
+    COMMENT ON TABLE parameters IS 'Параметры метеоизмерений';
+    COMMENT ON COLUMN parameters.id IS 'Уникальный код записи';
+    COMMENT ON COLUMN parameters.batch_id IS 'Ссылка на партию из batch';
+    COMMENT ON COLUMN parameters.parameter_type_id IS 'Ссылка на тип параметра из parameter_types';
+    COMMENT ON COLUMN parameters.value IS 'Числовое значение параметра';
 
     CREATE TABLE temperature_calc (
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_temperature_calc'),
@@ -97,16 +134,16 @@ BEGIN
         temperature NUMERIC(5,2),
         calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    COMMENT ON TABLE temperature_calc IS 'Расчет температуры, таблица 1';
+    COMMENT ON COLUMN temperature_calc.id IS 'Уникальный код записи';
+    COMMENT ON COLUMN temperature_calc.batch_id IS 'Ссылка на партию из batch';
+    COMMENT ON COLUMN temperature_calc.temperature IS 'Расчётная температура';
+    COMMENT ON COLUMN temperature_calc.calculated_at IS 'Дата и время расчёта';
 
-    RAISE NOTICE 'Транзакция 1: структура создана.';
+    RAISE NOTICE 'Блок 1: структура и комментарии созданы.';
 END $$;
 
-COMMIT;
-
-
--- ТРАНЗАКЦИЯ 2: тестовые данные
-BEGIN;
-
+-- Блок 2: тестовые данные
 DO $$
 BEGIN
     INSERT INTO base_units (id, name) VALUES
@@ -173,15 +210,10 @@ BEGIN
     PERFORM setval('seq_parameters', (SELECT MAX(id) FROM parameters));
     PERFORM setval('seq_temperature_calc', (SELECT MAX(id) FROM temperature_calc));
 
-    RAISE NOTICE 'Транзакция 2: данные вставлены.';
+    RAISE NOTICE 'Блок 2: данные вставлены.';
 END $$;
 
-COMMIT;
-
-
--- ТРАНЗАКЦИЯ 3: связи и ограничения
-BEGIN;
-
+-- Блок 3: связи и ограничения
 DO $$
 BEGIN
     ALTER TABLE units
@@ -210,7 +242,7 @@ BEGIN
         ADD CONSTRAINT fk_temp_batch FOREIGN KEY (batch_id) REFERENCES batch(id),
         ADD CONSTRAINT chk_temp_range CHECK (temperature BETWEEN -58.0 AND 58.0);
 
-    RAISE NOTICE 'Транзакция 3: связи и ограничения добавлены.';
+    RAISE NOTICE 'Блок 3: связи и ограничения добавлены.';
 END $$;
 
 COMMIT;
