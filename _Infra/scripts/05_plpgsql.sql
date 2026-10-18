@@ -5,6 +5,7 @@ begin
 
 -- СТРУКТУРА
 
+drop table if exists temp_correction cascade;
 drop table if exists temperature_calc cascade;
 drop table if exists parameters cascade;
 drop table if exists device_parameter_types cascade;
@@ -26,6 +27,7 @@ drop sequence if exists seq_devices cascade;
 drop sequence if exists seq_batch cascade;
 drop sequence if exists seq_parameters cascade;
 drop sequence if exists seq_temperature_calc cascade;
+drop sequence if exists seq_temp_correction cascade;
 
 create sequence seq_base_units;
 create sequence seq_units;
@@ -37,6 +39,7 @@ create sequence seq_devices;
 create sequence seq_batch;
 create sequence seq_parameters;
 create sequence seq_temperature_calc;
+create sequence seq_temp_correction;
 
 create table base_units (
     id int primary key default nextval('seq_base_units'),
@@ -138,6 +141,17 @@ comment on column temperature_calc.batch_id is 'Ссылка на партию �
 comment on column temperature_calc.temperature is 'Расчётная температура';
 comment on column temperature_calc.calculated_at is 'Дата и время расчёта';
 
+-- ДОБАВЛЕНО: Таблица поправок (из ТЗ)
+create table temp_correction (
+    id int primary key default nextval('seq_temp_correction'),
+    t0 numeric not null,
+    delta_tv numeric not null
+);
+comment on table temp_correction is 'Корректировка температуры (таблица поправок)';
+comment on column temp_correction.id is 'Уникальный код поправки';
+comment on column temp_correction.t0 is 'Измеренная температура';
+comment on column temp_correction.delta_tv is 'Виртуальная поправка';
+
 commit;
 
 
@@ -210,6 +224,11 @@ insert into temperature_calc(batch_id, temperature, calculated_at) values
     (4, 15.00, '2026-09-21 12:05:00+08'),
     (5, 30.50, '2026-09-21 14:05:00+08'),
     (6, 20.00, '2026-09-22 08:05:00+08');
+
+-- ДОБАВЛЕНО: Данные для поправок
+insert into temp_correction(t0, delta_tv) values
+    (0, 0.5), (5, 0.5), (10, 1), (15, 1),
+    (20, 1.5), (25, 2), (30, 3.5), (40, 4.5);
 
 commit;
 
