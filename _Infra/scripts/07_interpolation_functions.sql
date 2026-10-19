@@ -1,21 +1,24 @@
 -- Создание типа данных и функций для линейной интерполяции.
+DO $$
+BEGIN
 
 -- 1. DDL структуры: новый тип данных для интерполяции
 DROP TYPE IF EXISTS interp_struct CASCADE;
 
 CREATE TYPE interp_struct AS (
-    x0 numeric,
-    y0 numeric,
-    x1 numeric,
-    y1 numeric
+    x0 NUMERIC,
+    y0 NUMERIC,
+    x1 NUMERIC,
+    y1 NUMERIC
 );
 
--- 2. Функция определения параметров интерполяции
--- Принимает температуру, возвращает структуру для интерполяции
-DROP FUNCTION IF EXISTS get_interpolation_params(numeric);
+COMMIT; -- Первая транзакция завершена
 
-CREATE OR REPLACE FUNCTION get_interpolation_params(p_target_temp numeric)
-RETURNS interp_struct AS $$
+-- 2. Функция определения параметров интерполяции
+DROP FUNCTION IF EXISTS get_interpolation_params(NUMERIC);
+
+CREATE OR REPLACE FUNCTION get_interpolation_params(p_target_temp NUMERIC)
+RETURNS interp_struct AS $func$
 DECLARE
     res interp_struct;
 BEGIN
@@ -44,16 +47,16 @@ BEGIN
 
     RETURN res;
 END;
-$$ LANGUAGE plpgsql;
+$func$ LANGUAGE plpgsql;
+
 
 -- 3. Функция расчета интерполяции
--- Принимает значение x и структуру, возвращает расчетное значение y
-DROP FUNCTION IF EXISTS calculate_interpolation(numeric, interp_struct);
+DROP FUNCTION IF EXISTS calculate_interpolation(NUMERIC, interp_struct);
 
-CREATE OR REPLACE FUNCTION calculate_interpolation(p_x numeric, p_struct interp_struct)
-RETURNS numeric AS $$
+CREATE OR REPLACE FUNCTION calculate_interpolation(p_x NUMERIC, p_struct interp_struct)
+RETURNS NUMERIC AS $func$
 DECLARE
-    res numeric;
+    res NUMERIC;
 BEGIN
     IF p_struct.x0 = p_struct.x1 THEN
         RETURN p_struct.y0;
@@ -63,4 +66,9 @@ BEGIN
     
     RETURN res;
 END;
-$$ LANGUAGE plpgsql;
+$func$ LANGUAGE plpgsql;
+
+COMMIT; -- Вторая транзакция завершена
+
+END
+$$;

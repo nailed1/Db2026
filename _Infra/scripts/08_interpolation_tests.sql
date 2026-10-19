@@ -1,4 +1,3 @@
--- 07_interpolation_tests.sql
 -- Проверка работы функций интерполяции согласно примерам ТЗ.
 
 DO $$
@@ -7,7 +6,7 @@ DECLARE
     v_struct interp_struct;
     v_result numeric;
 BEGIN
-    -- Тест 1: температура 23°C (внутри таблицы, между 20 и 25)
+-- Тест 1: температура 23°C (внутри таблицы, между 20 и 25)
     v_target := 23;
     v_struct := get_interpolation_params(v_target);
     
